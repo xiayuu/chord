@@ -3,7 +3,9 @@
 
 from hashlib import sha1
 from rpcudp.rpcserver import RPCServer, rpccall
+from utils import Log
 
+log = Log().getLogger()
 
 RING_SIZE = 160
 
@@ -107,6 +109,8 @@ class ChordProtocol(RPCServer):
             })
 
         self.create_finger_table()
+        log.info(self.dict())
+        log.info(self.finger_table)
 
     def rpc_find_successor(self, ident):
         ident = int(ident)
