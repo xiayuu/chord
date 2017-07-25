@@ -3,8 +3,9 @@
 
 import logging, logging.handlers
 import argparse
-from hashlib import sha1
+import eventlet
 
+from hashlib import sha1
 parser = argparse.ArgumentParser()
 
 parser.add_argument('-b', '--bind', help="ipaddr:port this listen to")
@@ -16,6 +17,17 @@ args = parser.parse_args()
 LOGLEVEL = (logging.ERROR,
             logging.INFO,
             logging.DEBUG)
+
+def period_task(period=5):
+    def decorator(func):
+        def _do_task(*args, **kw):
+            while True:
+                eventlet.sleep(period)
+                func(*args, **kw)
+        def _period_task(*args, **kw):
+            eventlet.spawn_n(_do_task, *args, **kw)
+        return _period_task
+    return decorator
 
 class Singleton(object):
     _state = {}

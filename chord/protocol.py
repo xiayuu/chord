@@ -3,11 +3,11 @@
 
 from hashlib import sha1
 from rpcudp.rpcserver import RPCServer, rpccall
-from utils import Log
+from utils import Log, period_task
 
 log = Log().getLogger()
 
-RING_SIZE = 160
+RING_SIZE = 32
 
 def circular_range(i, p1, p2):
     if p1 < p2:
@@ -25,6 +25,7 @@ class ChordProtocol(RPCServer):
         self._ident = None
         self.successor = None
         self.predecessor = None
+        self.report_state()
 
     @rpccall
     def get_key(self, dest, key):
@@ -66,11 +67,15 @@ class ChordProtocol(RPCServer):
     def pop_preceding_keys(self, dest, ident):
         pass
 
+    @period_task(period=5)
+    def report_state(self):
+        log.info(self.dict())
+
     def hash_key(self, key):
-        return int(sha1(key).hexdigest(), 16)
+        return int(sha1(key).hexdigest(), 16)/pow(2, 128)
 
     def hash_node(self, address):
-        return int(sha1(address[0]).hexdigest(), 16)
+        return int(sha1(address[0]).hexdigest(), 16)/pow(2, 128)
 
     @property
     def ident(self):
@@ -82,9 +87,9 @@ class ChordProtocol(RPCServer):
 
     def dict(self):
         if self.successor:
-            self.successor['ident'] = str(self.successor['ident'])
+            self.successor['ident'] = self.successor['ident']
 
-        return {'address': self.address, 'ident':str(self.ident),
+        return {'address': self.address, 'ident':self.ident,
                 'successor': self.successor, 'predecessor': self.predecessor}
 
 
