@@ -18,6 +18,16 @@ LOGLEVEL = (logging.ERROR,
             logging.INFO,
             logging.DEBUG)
 
+def delay_run(delay=5):
+    def decorator(func):
+        def _do_task(*args, **kw):
+            eventlet.sleep(delay)
+            func(*args, **kw)
+        def _delay_run(*args, **kw):
+            eventlet.spawn_n(_do_task, *args, **kw)
+        return _delay_run
+    return decorator
+
 def period_task(period=5):
     def decorator(func):
         def _do_task(*args, **kw):

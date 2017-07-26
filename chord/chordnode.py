@@ -9,13 +9,10 @@ if not args.bind:
 
 ip, port = args.bind.split(':')
 bind = (ip, int(port))
-
-node = ChordProtocol(bind)
+dest = None
 if args.peer:
     ip, port = args.peer.split(':')
     dest = (ip, int(port))
-    node.join(dest)
-else:
-    node.join()
 
-node.run(bind)
+node = ChordProtocol(bind)
+node.run_chord(dest)
