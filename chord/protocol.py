@@ -143,7 +143,7 @@ class ChordProtocol(RPCServer):
     @delay_run(delay=5)
     def join(self, successor_addr):
         self.init_finger_table(successor_addr)
-        self.update_others(self.dict())
+        self.update_others()
 
     def rpc_find_successor(self, ident):
         pred = self.rpc_find_predecessor(ident)
@@ -175,14 +175,20 @@ class ChordProtocol(RPCServer):
                 self.finger_table[i + 1]['node'] = self.find_successor(successor_addr,
                                                                        start)
 
-    def update_others(self, node):
+    def update_others(self):
         for i in range(RING_SIZE):
             ind = (self.ident - pow(2, i)) % pow(2, RING_SIZE)
             p = self.rpc_find_predecessor(ind)
-            if p['ident'] != self.ident:
-                self.update_finger_table(p['address'], node, i)
+            self.update_finger_table(p['address'], self.dict(), i)
 
     def rpc_update_finger_table(self, node, finger_id):
+        print("node:%d, s:%d,i:%d" %(self.ident, node['ident'], finger_id))
+        if self.ident == self.successor['address']:
+            self.successor['ident'] = node['ident']
+            self.successor['address'] = node['address']
+            self.finger_table[finger_id]['node'] = node
+            return
+
         if circular_range_a(node['ident'], self.ident,
                             self.finger_table[finger_id]['node']['ident']):
             if finger_id == 0:
@@ -201,10 +207,14 @@ class ChordProtocol(RPCServer):
         node = self.dict()
         node_id = node['ident']
         successor = self.successor
+        if node_id == self.successor['ident']:
+            return node
         while not circular_range_b(ident, node_id, successor['ident']):
             node = self.closest_preceding_finger(node['address'], ident)
             node_id = node['ident']
             successor = node['successor']
+            print("node:%d, successor:%d, ident:%d" % (node['ident'], successor['ident'],
+                                                       ident))
         return node
 
     def rpc_getkey(self, key):
