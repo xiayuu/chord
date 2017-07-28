@@ -3,7 +3,7 @@
 
 import logging, logging.handlers
 import argparse
-import eventlet
+import eventlet, eventlet.debug
 
 from hashlib import sha1
 parser = argparse.ArgumentParser()
@@ -17,6 +17,7 @@ args = parser.parse_args()
 LOGLEVEL = (logging.ERROR,
             logging.INFO,
             logging.DEBUG)
+
 
 def delay_run(delay=5):
     def decorator(func):
