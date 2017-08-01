@@ -45,6 +45,8 @@ class ChordProtocol(RPCServer):
         self.predecessor = None
         self.init_ring()
         self.report_state()
+        self.stabilize()
+        self.fix_fingers()
 
     def run_chord(self, peer=None):
         if peer:
@@ -89,6 +91,10 @@ class ChordProtocol(RPCServer):
 
     @rpccall
     def pop_preceding_keys(self, dest, ident):
+        pass
+
+    @rpccall
+    def notify(self, dest, node):
         pass
 
     @period_task(period=15)
@@ -145,6 +151,25 @@ class ChordProtocol(RPCServer):
         self.init_finger_table(successor_addr)
         self.update_others()
 
+    @period_task(period=10)
+    def stabilize(self):
+        x = self.rdict(self.successor['address'])['predecessor']
+        if circular_range_nab(x['ident'], self.ident, self.successor['ident']):
+            self.successor['ident'] = x['ident']
+            self.successor['address'] = x['address']
+        self.notify(self.successor['address'], self.dict())
+
+    def rpc_notify(self, node):
+        if circular_range_nab(node['ident'], self.predecessor['ident'], self.ident):
+            self.predecessor['ident'] = node['ident']
+            self.predecessor['address'] = node['address']
+
+    @period_task(period=15)
+    def fix_fingers(self):
+        for i in range(RING_SIZE):
+            self.finger_table[i]['node'] = self.rpc_find_successor(
+                self.finger_table[i]['start'])
+
     def rpc_find_successor(self, ident):
         pred = self.rpc_find_predecessor(ident)
         return self.rdict(pred['successor']['address'])
@@ -179,10 +204,10 @@ class ChordProtocol(RPCServer):
         for i in range(RING_SIZE):
             ind = (self.ident - pow(2, i)) % pow(2, RING_SIZE)
             p = self.rpc_find_predecessor(ind)
-            self.update_finger_table(p['address'], self.dict(), i)
+            if p['ident'] != self.ident:
+                self.update_finger_table(p['address'], self.dict(), i)
 
     def rpc_update_finger_table(self, node, finger_id):
-        print("node:%d, s:%d,i:%d" %(self.ident, node['ident'], finger_id))
         if self.ident == self.successor['address']:
             self.successor['ident'] = node['ident']
             self.successor['address'] = node['address']
@@ -207,14 +232,12 @@ class ChordProtocol(RPCServer):
         node = self.dict()
         node_id = node['ident']
         successor = self.successor
-        if node_id == self.successor['ident']:
-            return node
         while not circular_range_b(ident, node_id, successor['ident']):
             node = self.closest_preceding_finger(node['address'], ident)
+            if node_id == node['ident']:
+                return node
             node_id = node['ident']
             successor = node['successor']
-            print("node:%d, successor:%d, ident:%d" % (node['ident'], successor['ident'],
-                                                       ident))
         return node
 
     def rpc_getkey(self, key):
