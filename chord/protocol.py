@@ -14,24 +14,22 @@ def circular_range_nab(i, p1, p2):
     if p1 < p2:
         return i < p2 and i > p1
     if p1 > p2:
-        return i < p1 and i > p2
+        return i > p1 or i < p2
     return False
 
 # p2<=i<p1 or p1<=i<p2 or i = p1 = p2
 def circular_range_a(i, p1, p2):
-    if p1 < p2:
-        return i < p2 and (i > p1 or i == p1)
-    if p1 > p2:
-        return i < p1 and (i > p2 or i == p2)
-    return (i==p1) and (i==p2)
+    if i == p1 and p1 != p2:
+        return True
+    else:
+        return circular_range_nab(i, p1, p2)
 
 # p2<i<=p1 or p1<i<=p2 or i = p1 = p2
 def circular_range_b(i, p1, p2):
-    if p1 < p2:
-        return (i < p2 or i == p2) and (i > p1)
-    if p1 > p2:
-        return (i < p1 or i == p1) and (i > p2)
-    return (i==p1) and (i==p2)
+    if i == p2 and p1 != p2:
+        return True
+    else:
+        return circular_range_nab(i, p1, p2)
 
 class ChordProtocol(RPCServer):
 
@@ -226,6 +224,8 @@ class ChordProtocol(RPCServer):
         self.predecessor = {
             'address': node['address'],
             'ident': node['ident']}
+        if self.ident == self.successor['ident']:
+            self.successor = self.predecessor
         return 0
 
     def rpc_find_predecessor(self, ident):
