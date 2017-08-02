@@ -104,6 +104,7 @@ class ChordProtocol(RPCServer):
             log.info("%d: start:%d,node.ident:%d" %
                      (i, f['start'], f['node']['ident']))
             i = i + 1
+        log.info(self.keys)
 
     def hash_key(self, key):
         return int(sha1(key).hexdigest(), 16)/pow(2, 160 - RING_SIZE)
@@ -148,6 +149,9 @@ class ChordProtocol(RPCServer):
     def join(self, successor_addr):
         self.init_finger_table(successor_addr)
         self.update_others()
+        keys = self.pop_preceding_keys(self.successor['address'], self.ident)
+        for key in keys:
+            self.keys[key] = keys[key]
 
     @period_task(period=10)
     def stabilize(self):
@@ -169,6 +173,8 @@ class ChordProtocol(RPCServer):
                 self.finger_table[i]['start'])
 
     def rpc_find_successor(self, ident):
+        if ident == self.ident:
+            return self.dict()
         pred = self.rpc_find_predecessor(ident)
         return self.rdict(pred['successor']['address'])
 
@@ -240,17 +246,34 @@ class ChordProtocol(RPCServer):
             successor = node['successor']
         return node
 
-    def rpc_getkey(self, key):
+    def rpc_get_key(self, key):
         key_ident = self.hash_key(key)
-        node = self.find_successor(key_ident)
+        node = self.rpc_find_successor(key_ident)
 
-        if int(node['ident']) == int(self.ident):
-            addr = self.address[0]
+        if node['ident'] == self.ident:
             if key in self.keys:
                 res = self.keys[key]
             else:
                 res = None
-            return {'node': addr, 'res': res}
+            return res
         else:
             return self.get_key(node['address'], key)
 
+    def rpc_add_key(self, key, val):
+        key_ident = self.hash_key(key)
+        node = self.rpc_find_successor(key_ident)
+        if node['ident'] == self.ident:
+            self.keys[key] = val
+            return "OK"
+        else:
+            return self.add_key(node['address'], key, val)
+
+    def rpc_delete_key(self, key):
+        key_ident = self.hash_key(key)
+        node = self.rpc_find_successor(key_ident)
+
+        if node['ident'] == self.ident:
+            self.keys.pop(key)
+            return "OK"
+        else:
+            return self.delete_key(node['address'], key)
