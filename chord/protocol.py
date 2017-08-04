@@ -7,7 +7,7 @@ from utils import Log, period_task, delay_run
 
 log = Log().getLogger()
 
-RING_SIZE = 4
+RING_SIZE = 10
 
 # p2<i<p1 or p1<i<p2
 def circular_range_nab(i, p1, p2):
